@@ -64,8 +64,6 @@ exports.protect = async (req, res, next) => {
 
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    console.log(decoded);
-
     //3) Check if user still exists
     const currentUser = await Seller.findOne({ _id: ObjectId(decoded.id) });
     if (!currentUser) {
