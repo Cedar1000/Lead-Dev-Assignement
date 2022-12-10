@@ -1,36 +1,88 @@
 const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
+const ObjectId = require('mongodb').ObjectId;
 
 const AppError = require('../utils/appError');
 
 const db = require('../db');
+const signToken = require('../utils/signToken');
 
-exports.login = async (req, res, next) => {
+const Seller = db.collection('Sellers');
+
+exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (username && password) {
-      // Find User From Database
-      const user = await User.findOne({ email });
+      // Find Seller From Database
+      const seller = await Seller.findOne({ seller_id: username });
 
-      // Checks if user does not exists in db and password is incorrect
-      if (!user || !(await user.correctPassword(password, user.password))) {
-        return next(new AppError('Email or Password is incorrect', 401));
+      // Checks if seller does not exists in db and password is incorrect
+      if (!seller || password !== seller.seller_zip_code_prefix) {
+        throw new AppError('Usernamme or Password is incorrect', 401);
       }
 
-      if (!user.active)
-        return next(
-          new AppError('You have been de-activated and hence cannot login', 401)
-        );
+      // Sign JWT
+      const token = signToken(seller._id);
 
-      // Send JWT
-      createAndSendToken(user, 200, res, next);
+      res.status(200).json({
+        status: 'success',
+        token,
+        seller,
+      });
     } else {
-      throw new AppError('Please provide email and password', 401);
+      throw new AppError('Please provide username and password', 401);
     }
+  } catch (error) {
+    const { statusCode, message } = error;
+    res.status(statusCode).json({
+      staus: 'fail',
+      message,
+    });
+  }
+};
+
+exports.protect = async (req, res, next) => {
+  try {
+    //1) Getting token and check if its there
+
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    //2) Validate token
+    if (!token) {
+      throw new AppError(
+        'You are not logged in! Please login to get access',
+        401
+      );
+    }
+
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+    console.log(decoded);
+
+    //3) Check if user still exists
+    const currentUser = await Seller.findOne({ _id: ObjectId(decoded.id) });
+    if (!currentUser) {
+      throw new AppError(
+        'The user belonging to the token no longer exists.',
+        401
+      );
+    }
+
+    // GRANT ACCESS TO ROUTE
+    req.user = currentUser;
+
+    next();
   } catch (error) {
     console.log(error);
     const { statusCode, message } = error;
-    res.status(statusCode).json({
+    res.status(statusCode || 500).json({
       staus: 'fail',
       message,
     });
