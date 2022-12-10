@@ -18,13 +18,6 @@ exports.getOrderItems = async (req, res) => {
 
     const skip = (parseInt(offset | 1) - 1) * limit;
 
-    // const orders = await OrderItem.find({ seller_id })
-    //   .sort(sortParams)
-    //   .collation({ locale: 'en_US', numericOrdering: true })
-    //   .skip(skip)
-    //   .limit(limit)
-    //   .toArray();
-
     const orders = await OrderItem.aggregate(
       [
         { $match: { seller_id } },
@@ -60,11 +53,14 @@ exports.getOrderItems = async (req, res) => {
       { collation: { locale: 'en_US', numericOrdering: true } }
     ).toArray();
 
+    const total = await OrderItem.countDocuments({ seller_id });
+
     res.status(200).json({
       status: 'success',
       results: orders.length,
       limit,
       offset: parseInt(offset),
+      total,
       data: orders,
     });
   } catch (error) {

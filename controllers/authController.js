@@ -86,3 +86,27 @@ exports.protect = async (req, res, next) => {
     });
   }
 };
+
+exports.updateAccount = async (req, res) => {
+  try {
+    const { seller_city, seller_state } = req.body;
+
+    const seller = await Seller.findOneAndUpdate(
+      { _id: ObjectId(req.user._id) },
+      { $set: { seller_city, seller_state } },
+
+      { returnDocument: 'after' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: seller.value,
+    });
+  } catch (error) {
+    const { statusCode, message } = error;
+    res.status(statusCode || 500).json({
+      staus: 'fail',
+      message,
+    });
+  }
+};
