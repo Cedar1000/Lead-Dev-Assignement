@@ -11,6 +11,6 @@ const router = Router();
 
 router.get('/', protect, getOrderItems);
 
-router.delete('/:id', deleteOrderItem);
+router.delete('/:id', protect, deleteOrderItem);
 
 module.exports = router;

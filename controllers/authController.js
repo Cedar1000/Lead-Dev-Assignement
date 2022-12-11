@@ -78,7 +78,6 @@ exports.protect = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log(error);
     const { statusCode, message } = error;
     res.status(statusCode || 500).json({
       staus: 'fail',
@@ -90,10 +89,14 @@ exports.protect = async (req, res, next) => {
 exports.updateAccount = async (req, res) => {
   try {
     const { seller_city, seller_state } = req.body;
+    const params = {};
+
+    if (seller_city) params['seller_city'] = seller_city;
+    if (seller_state) params['seller_state'] = seller_state;
 
     const seller = await Seller.findOneAndUpdate(
       { _id: ObjectId(req.user._id) },
-      { $set: { seller_city, seller_state } },
+      { $set: params },
 
       { returnDocument: 'after' }
     );
