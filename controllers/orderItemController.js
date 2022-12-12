@@ -59,8 +59,9 @@ exports.getOrderItems = async (req, res) => {
       status: 'success',
       results: orders.length,
       limit,
-      offset: parseInt(offset),
+      offset: parseInt(offset) || 1,
       total,
+      maxPages: Math.round(total / limit),
       data: orders,
     });
   } catch (error) {
@@ -84,6 +85,55 @@ exports.deleteOrderItem = async (req, res) => {
     res.status(204).json({
       status: 'success',
       data: null,
+    });
+  } catch (error) {
+    const { statusCode, message } = error;
+    res.status(statusCode || 500).json({
+      staus: 'fail',
+      message,
+    });
+  }
+};
+
+exports.getOrderItem = async (req, res) => {
+  try {
+    const orderItem = await OrderItem.findOne({ _id: ObjectId(req.params.id) });
+
+    if (!orderItem)
+      throw new AppError('No Order Item was found with this ID', 404);
+
+    res.status(200).json({
+      status: 'success',
+      data: orderItem,
+    });
+  } catch (error) {
+    const { statusCode, message } = error;
+    res.status(statusCode || 500).json({
+      staus: 'fail',
+      message,
+    });
+  }
+};
+
+exports.updateOrderItem = async (req, res) => {
+  try {
+    const { price, freight_value } = req.body;
+
+    const params = {};
+
+    if (price) params['price'] = price;
+    if (freight_value) params['freight_value'] = freight_value;
+
+    const seller = await OrderItem.findOneAndUpdate(
+      { _id: ObjectId(req.params.id) },
+      { $set: params },
+
+      { returnDocument: 'after' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: seller,
     });
   } catch (error) {
     const { statusCode, message } = error;
